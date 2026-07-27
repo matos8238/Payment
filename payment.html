@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>תשלום מאובטח בכרטיס אשראי</title>
+<style>
+  :root{
+    --bg-1:#0f1226;
+    --bg-2:#1b1f4b;
+    --accent:#6c5ce7;
+    --accent-2:#00d2a8;
+    --card-radius:18px;
+    --panel-bg:#ffffff;
+    --panel-radius:22px;
+    --text-dark:#1b1d28;
+    --text-mid:#6b7080;
+    --danger:#e5484d;
+    --ok:#1aa876;
+    --shadow-lg:0 20px 50px -15px rgba(20,20,50,.35);
+    --shadow-sm:0 6px 16px -8px rgba(20,20,50,.25);
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    min-height:100vh;
+    font-family:"Segoe UI","Arial Hebrew","Helvetica Neue",Arial,sans-serif;
+    background:
+      radial-gradient(circle at 15% 15%, rgba(108,92,231,.35), transparent 45%),
+      radial-gradient(circle at 85% 85%, rgba(0,210,168,.25), transparent 45%),
+      linear-gradient(160deg, var(--bg-1), var(--bg-2));
+    color:var(--text-dark);
+    padding:24px 14px 60px;
+    display:flex;
+    justify-content:center;
+  }
+
+  .page{
+    width:100%;
+    max-width:1040px;
+    display:flex;
+    flex-direction:column;
+    gap:22px;
+  }
+
+  .page-header{
+    text-align:center;
+    color:#f2f2fb;
+    margin-bottom:4px;
+  }
+  .page-header h1{
+    font-size:1.5rem;
+    margin:0 0 6px;
+    font-weight:700;
+  }
+  .page-header p{
+    margin:0;
+    font-size:.9rem;
+    color:#c6c8e6;
+  }
+
+  .layout{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:22px;
+    align-items:start;
+  }
+
+  @media (min-width:880px){
+    .layout{
+      grid-template-columns:380px 1fr;
+    }
+  }
+
+  /* ---------- CARD PREVIEW ---------- */
+  .card-stage{
+    perspective:1400px;
+    width:100%;
+    max-width:400px;
+    margin:0 auto;
+    position:sticky;
+    top:20px;
+  }
+
+  .card-3d{
+    position:relative;
+    width:100%;
+    aspect-ratio:1.586/1;
+    transform-style:preserve-3d;
+    transition:transform .65s cubic-bezier(.4,.2,.2,1);
+  }
+  .card-3d.flipped{
+    transform:rotateY(180deg);
+  }
+
+  .card-face{
+    position:absolute;
+    inset:0;
+    border-radius:var(--card-radius);
+    backface-visibility:hidden;
+    box-shadow:var(--shadow-lg);
+    overflow:hidden;
+    color:#fff;
+    direction:ltr;
+  }
+
+  .card-front{
+    background:linear-gradient(135deg,#5b4bd6 0%,#7d5fe8 45%,#3f2fae 100%);
+    padding:22px 24px;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    transition:background .4s ease;
+  }
+  .card-front.brand-visa{background:linear-gradient(135deg,#1a1f71 0%,#2b3fbf 60%,#151a5c 100%);}
+  .card-front.brand-mastercard{background:linear-gradient(135deg,#232526 0%,#3a3d40 60%,#151515 100%);}
+  .card-front.brand-amex{background:linear-gradient(135deg,#0f6fa8 0%,#1a97d4 60%,#0a4f79 100%);}
+  .card-front.brand-diners{background:linear-gradient(135deg,#5c5c5c 0%,#8a8a8a 60%,#3a3a3a 100%);}
+
+  .card-front::before{
+    content:"";
+    position:absolute;
+    width:220px;height:220px;
+    background:radial-gradient(circle, rgba(255,255,255,.15), transparent 65%);
+    top:-60px; left:-60px;
+    pointer-events:none;
+  }
+
+  .card-top-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+  }
+
+  .chip{
+    width:44px;height:32px;
+    border-radius:6px;
+    background:linear-gradient(135deg,#f4d998,#d4af5a);
+    position:relative;
+    box-shadow:inset 0 0 0 1px rgba(0,0,0,.15);
+  }
+  .chip::before,.chip::after{
+    content:"";
+    position:absolute;
+    background:rgba(0,0,0,.18);
+  }
+  .chip::before{ top:50%; left:4px; right:4px; height:1.5px; transform:translateY(-50%);}
+  .chip::after{ left:50%; top:4px; bottom:4px; width:1.5px; transform:translateX(-50%);}
+
+  .brand-logo{
+    height:28px;
+    display:flex;
+    align-items:center;
+    font-weight:800;
+    font-style:italic;
+    letter-spacing:.5px;
+    font-size:1.1rem;
+    opacity:.95;
+    min-width:56px;
+    justify-content:flex-end;
+  }
+
+  .card-number{
+    font-size:1.32rem;
+    letter-spacing:2.5px;
+    font-weight:600;
+    font-family:"Courier New",monospace;
+    text-shadow:0 1px 2px rgba(0,0,0,.25);
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+
+  .card-bottom-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    gap:10px;
+  }
+
+  .card-holder-block{
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+    overflow:hidden;
+  }
+  .card-label{
+    font-size:.55rem;
+    text-transform:uppercase;
+    opacity:.65;
+    letter-spacing:1px;
+  }
+  .card-holder-name{
+    font-size:.92rem;
+    font-weight:600;
+    text-transform:uppercase;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    max-width:220px;
+  }
+  .card-expiry{
+    font-size:.92rem;
+    font-weight:600;
+    font-family:"Courier New",monospace;
+  }
+
+  /* back */
+  .card-back{
+    background:linear-gradient(135deg,#2b2b3a,#1b1b26);
+    transform:rotateY(180deg);
+    display:flex;
+    flex-direction:column;
+  }
+  .magnetic-strip{
+    background:#0c0c12;
+    height:22%;
+    margin-top:18px;
+  }
+  .cvv-row{
+    margin-top:18px;
+    padding:0 20px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .signature-strip{
+    flex:1;
+    height:34px;
+    background:repeating-linear-gradient(45deg,#e9e9ee,#e9e9ee 4px,#dcdce3 4px,#dcdce3 8px);
+    border-radius:4px;
+  }
+  .cvv-box{
+    background:#fff;
+    color:#222;
+    font-weight:700;
+    font-family:"Courier New",monospace;
+    font-size:.95rem;
+    border-radius:4px;
+    padding:8px 12px;
+    min-width:50px;
+    text-align:center;
+    letter-spacing:2px;
+  }
+  .back-brand{
+    margin-top:auto;
+    padding:14px 20px 18px;
+    display:flex;
+    justify-content:flex-end;
+    opacity:.9;
+  }
+
+  /* ---------- FORM PANEL ---------- */
+  .panel{
+    background:var(--panel-bg);
+    border-radius:var(--panel-radius);
+    box-shadow:var(--shadow-lg);
+    padding:26px 22px 24px;
+  }
+
+  .panel h2{
+    margin:0 0 4px;
+    font-size:1.15rem;
+  }
+  .panel .sub{
+    margin:0 0 20px;
+    color:var(--text-mid);
+    font-size:.85rem;
+  }
+
+  form{
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+  }
+
+  .field{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+  .field label{
+    font-size:.82rem;
+    font-weight:600;
+    color:#3a3d4d;
+  }
+  .field .hint{
+    font-size:.72rem;
+    color:var(--danger);
+    min-height:14px;
+    display:block;
+  }
+
+  .input-wrap{
+    position:relative;
+    display:flex;
+    align-items:center;
+  }
+
+  input[type="text"],
+  input[type="tel"],
+  select{
+    width:100%;
+    padding:12px 14px;
+    font-size:.95rem;
+    border:1.5px solid #e3e4ee;
+    border-radius:12px;
+    outline:none;
+    background:#fbfbfe;
+    color:var(--text-dark);
+    transition:border-color .2s, box-shadow .2s, background .2s;
+    font-family:inherit;
+  }
+  input::placeholder{color:#b3b5c6;}
+
+  input:focus,select:focus{
+    border-color:var(--accent);
+    background:#fff;
+    box-shadow:0 0 0 4px rgba(108,92,231,.14);
+  }
+
+  input.invalid{
+    border-color:var(--danger);
+    box-shadow:0 0 0 4px rgba(229,72,77,.12);
+  }
+  input.valid{
+    border-color:var(--ok);
+  }
+
+  .row-2{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:14px;
+  }
+
+  .card-number-input, .expiry-input{ direction:ltr; text-align:left; letter-spacing:1px;}
+  .cvv-input{ direction:ltr; text-align:left; letter-spacing:3px;}
+
+  .brand-mini{
+    position:absolute;
+    left:12px;
+    font-size:.7rem;
+    font-weight:800;
+    font-style:italic;
+    color:var(--text-mid);
+    pointer-events:none;
+  }
+
+  select{
+    appearance:none;
+    -webkit-appearance:none;
+    background-image:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="14" height="9" viewBox="0 0 14 9"><path d="M1 1l6 6 6-6" fill="none" stroke="%236b7080" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>');
+    background-repeat:no-repeat;
+    background-position:left 14px center;
+    padding-left:34px;
+  }
+
+  .pay-btn{
+    margin-top:6px;
+    border:none;
+    border-radius:14px;
+    padding:15px 18px;
+    background:linear-gradient(135deg,var(--accent),#8f7bf0);
+    color:#fff;
+    font-size:1.02rem;
+    font-weight:700;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    box-shadow:0 12px 24px -8px rgba(108,92,231,.55);
+    transition:transform .15s ease, box-shadow .15s ease, opacity .2s;
+  }
+  .pay-btn:hover{
+    transform:translateY(-2px);
+    box-shadow:0 16px 30px -8px rgba(108,92,231,.65);
+  }
+  .pay-btn:active{ transform:translateY(0); }
+  .pay-btn:disabled{
+    opacity:.7;
+    cursor:progress;
+    transform:none;
+  }
+
+  .pay-btn .amount{
+    font-family:"Courier New",monospace;
+    font-weight:800;
+  }
+
+  .shake{
+    animation:shake .4s;
+  }
+  @keyframes shake{
+    10%,90%{transform:translateX(-1px);}
+    20%,80%{transform:translateX(2px);}
+    30%,50%,70%{transform:translateX(-4px);}
+    40%,60%{transform:translateX(4px);}
+  }
+
+  .success-box{
+    display:none;
+    align-items:center;
+    gap:12px;
+    background:#e9fbf3;
+    border:1px solid #b6ecd6;
+    color:#0d7a53;
+    padding:14px 16px;
+    border-radius:12px;
+    font-size:.88rem;
+    font-weight:600;
+  }
+  .success-box.show{ display:flex; }
+  .success-box svg{ flex-shrink:0; }
+
+  /* trust indicators */
+  .trust{
+    margin-top:22px;
+    padding-top:18px;
+    border-top:1px solid #eee;
+    display:flex;
+    flex-wrap:wrap;
+    gap:12px;
+    justify-content:center;
+    align-items:center;
+  }
+  .trust-badge{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    font-size:.74rem;
+    color:var(--text-mid);
+    background:#f5f5fa;
+    padding:7px 11px;
+    border-radius:20px;
+  }
+  .trust-badge svg{ flex-shrink:0; }
+
+  .footnote{
+    text-align:center;
+    color:#c6c8e6;
+    font-size:.72rem;
+    margin-top:4px;
+  }
+
+  @media (max-width:420px){
+    .row-2{ grid-template-columns:1fr; }
+    .panel{ padding:20px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <div class="page-header">
+    <h1>תשלום מאובטח בכרטיס אשראי</h1>
+    <p>הזינו את פרטי הכרטיס שלכם לביצוע התשלום בצורה בטוחה ומוצפנת</p>
+  </div>
+
+  <div class="layout">
+
+    <!-- CARD PREVIEW -->
+    <div class="card-stage">
+      <div class="card-3d" id="card3d">
+        <div class="card-face card-front" id="cardFront">
+          <div class="card-top-row">
+            <div class="chip"></div>
+            <div class="brand-logo" id="brandLogoFront"></div>
+          </div>
+          <div class="card-number" id="cardNumberDisplay">•••• •••• •••• ••••</div>
+          <div class="card-bottom-row">
+            <div class="card-holder-block">
+              <span class="card-label">Card Holder</span>
+              <span class="card-holder-name" id="cardNameDisplay">YOUR NAME</span>
+            </div>
+            <div class="card-holder-block">
+              <span class="card-label">Expires</span>
+              <span class="card-expiry" id="cardExpiryDisplay">MM/YY</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-face card-back">
+          <div class="magnetic-strip"></div>
+          <div class="cvv-row">
+            <div class="signature-strip"></div>
+            <div class="cvv-box" id="cardCvvDisplay">•••</div>
+          </div>
+          <div class="back-brand" id="brandLogoBack"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FORM -->
+    <div class="panel">
+      <h2>פרטי תשלום</h2>
+      <p class="sub">כל הפרטים מוצפנים ומאובטחים בתקן PCI-DSS</p>
+
+      <form id="paymentForm" novalidate>
+
+        <div class="field">
+          <label for="holderName">שם בעל הכרטיס (כפי שמופיע על גבי הכרטיס)</label>
+          <input type="text" id="holderName" placeholder="ישראל ישראלי" autocomplete="cc-name">
+          <span class="hint" id="err-holderName"></span>
+        </div>
+
+        <div class="field">
+          <label for="nationalId">תעודת זהות / דרכון</label>
+          <input type="text" id="nationalId" inputmode="numeric" maxlength="9" placeholder="123456789" autocomplete="off">
+          <span class="hint" id="err-nationalId"></span>
+        </div>
+
+        <div class="field">
+          <label for="cardNumber">מספר כרטיס אשראי</label>
+          <div class="input-wrap">
+            <input type="text" id="cardNumber" class="card-number-input" inputmode="numeric" placeholder="0000 0000 0000 0000" autocomplete="cc-number">
+            <span class="brand-mini" id="brandMiniLabel"></span>
+          </div>
+          <span class="hint" id="err-cardNumber"></span>
+        </div>
+
+        <div class="row-2">
+          <div class="field">
+            <label for="expiry">תוקף (MM/YY)</label>
+            <input type="text" id="expiry" class="expiry-input" inputmode="numeric" placeholder="MM/YY" maxlength="5" autocomplete="cc-exp">
+            <span class="hint" id="err-expiry"></span>
+          </div>
+          <div class="field">
+            <label for="cvv">קוד אבטחה (CVV)</label>
+            <input type="text" id="cvv" class="cvv-input" inputmode="numeric" placeholder="•••" maxlength="4" autocomplete="cc-csc">
+            <span class="hint" id="err-cvv"></span>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="installments">מספר תשלומים</label>
+          <select id="installments">
+            <option value="1">תשלום אחד</option>
+            <option value="2">2 תשלומים</option>
+            <option value="3">3 תשלומים</option>
+            <option value="4">4 תשלומים</option>
+            <option value="5">5 תשלומים</option>
+            <option value="6">6 תשלומים</option>
+            <option value="7">7 תשלומים</option>
+            <option value="8">8 תשלומים</option>
+            <option value="9">9 תשלומים</option>
+            <option value="10">10 תשלומים</option>
+            <option value="11">11 תשלומים</option>
+            <option value="12">12 תשלומים</option>
+          </select>
+        </div>
+
+        <button type="submit" class="pay-btn" id="payBtn">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="4" y="10" width="16" height="10" rx="2" stroke="white" stroke-width="2"/>
+            <path d="M7 10V7a5 5 0 0110 0v3" stroke="white" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <span>שלם עכשיו — </span><span class="amount">₪350.00</span>
+        </button>
+
+        <div class="success-box" id="successBox">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="11" fill="#1aa876"/>
+            <path d="M7 12.5l3 3 7-7" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span>התשלום בוצע בהצלחה! מספר אישור: <span id="confNumber"></span></span>
+        </div>
+      </form>
+
+      <div class="trust">
+        <div class="trust-badge">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="4" y="10" width="16" height="10" rx="2" stroke="#6b7080" stroke-width="2"/><path d="M7 10V7a5 5 0 0110 0v3" stroke="#6b7080" stroke-width="2" stroke-linecap="round"/></svg>
+          PCI-DSS Compliant
+        </div>
+        <div class="trust-badge">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 2l8 4v6c0 5-3.4 8.5-8 10-4.6-1.5-8-5-8-10V6l8-4z" stroke="#6b7080" stroke-width="2" stroke-linejoin="round"/></svg>
+          הצפנת SSL 256-bit
+        </div>
+        <div class="trust-badge">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#6b7080" stroke-width="2"/><path d="M8.5 12.5l2.5 2.5 4.5-5" stroke="#6b7080" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          תשלום מאובטח
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <p class="footnote">אתר זה הינו הדגמה בלבד — אין להזין פרטי כרטיס אשראי אמיתיים</p>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------- Elements ----------
+  const holderNameEl = document.getElementById('holderName');
+  const nationalIdEl = document.getElementById('nationalId');
+  const cardNumberEl = document.getElementById('cardNumber');
+  const expiryEl = document.getElementById('expiry');
+  const cvvEl = document.getElementById('cvv');
+  const installmentsEl = document.getElementById('installments');
+  const form = document.getElementById('paymentForm');
+  const payBtn = document.getElementById('payBtn');
+  const successBox = document.getElementById('successBox');
+  const confNumber = document.getElementById('confNumber');
+
+  const card3d = document.getElementById('card3d');
+  const cardFront = document.getElementById('cardFront');
+  const cardNumberDisplay = document.getElementById('cardNumberDisplay');
+  const cardNameDisplay = document.getElementById('cardNameDisplay');
+  const cardExpiryDisplay = document.getElementById('cardExpiryDisplay');
+  const cardCvvDisplay = document.getElementById('cardCvvDisplay');
+  const brandLogoFront = document.getElementById('brandLogoFront');
+  const brandLogoBack = document.getElementById('brandLogoBack');
+  const brandMiniLabel = document.getElementById('brandMiniLabel');
+
+  // ---------- Brand logos (inline text-based marks, no external requests) ----------
+  const BRAND_MARKS = {
+    visa: '<span style="font-family:Arial;font-style:italic;font-weight:800;letter-spacing:1px;">VISA</span>',
+    mastercard: '<span style="display:flex;align-items:center;"><span style="width:20px;height:20px;border-radius:50%;background:#eb001b;opacity:.9;margin-left:-8px;"></span><span style="width:20px;height:20px;border-radius:50%;background:#f79e1b;opacity:.9;"></span></span>',
+    amex: '<span style="font-family:Arial;font-weight:800;font-size:.85rem;letter-spacing:.5px;">AMEX</span>',
+    diners: '<span style="font-family:Arial;font-weight:800;font-size:.8rem;letter-spacing:.5px;">Diners</span>',
+    unknown: ''
+  };
+
+  // ---------- Brand detection ----------
+  function detectBrand(number){
+    const n = number.replace(/\s/g,'');
+    if (/^4/.test(n)) return 'visa';
+    if (/^(5[1-5]|2[2-7])/.test(n)) return 'mastercard';
+    if (/^3[47]/.test(n)) return 'amex';
+    if (/^3(0[0-5]|[68])/.test(n)) return 'diners';
+    return 'unknown';
+  }
+
+  function brandMaxLen(brand){
+    if (brand === 'amex') return 15;
+    if (brand === 'diners') return 14;
+    return 16;
+  }
+
+  function brandGroups(brand){
+    if (brand === 'amex') return [4,6,5];
+    if (brand === 'diners') return [4,6,4];
+    return [4,4,4,4];
+  }
+
+  function formatCardNumber(raw, brand){
+    let digits = raw.replace(/\D/g,'').slice(0, brandMaxLen(brand));
+    const groups = brandGroups(brand);
+    let out = [];
+    let idx = 0;
+    for (const g of groups){
+      if (idx >= digits.length) break;
+      out.push(digits.slice(idx, idx+g));
+      idx += g;
+    }
+    return out.join(' ');
+  }
+
+  function cvvMaxLen(brand){
+    return brand === 'amex' ? 4 : 3;
+  }
+
+  // ---------- Luhn check ----------
+  function luhnValid(numStr){
+    const digits = numStr.replace(/\D/g,'');
+    if (digits.length < 12) return false;
+    let sum = 0, alt = false;
+    for (let i = digits.length - 1; i >= 0; i--){
+      let d = parseInt(digits[i], 10);
+      if (alt){
+        d *= 2;
+        if (d > 9) d -= 9;
+      }
+      sum += d;
+      alt = !alt;
+    }
+    return sum % 10 === 0;
+  }
+
+  // ---------- Israeli ID checksum ----------
+  function isValidIsraeliId(id){
+    id = String(id).trim();
+    if (!/^\d{5,9}$/.test(id)) return false;
+    id = id.padStart(9, '0');
+    let sum = 0;
+    for (let i = 0; i < 9; i++){
+      let d = Number(id[i]) * ((i % 2) + 1);
+      if (d > 9) d -= 9;
+      sum += d;
+    }
+    return sum % 10 === 0;
+  }
+
+  // ---------- Field error helpers ----------
+  function setError(input, errEl, message){
+    if (message){
+      input.classList.add('invalid');
+      input.classList.remove('valid');
+      errEl.textContent = message;
+      return false;
+    } else {
+      input.classList.remove('invalid');
+      input.classList.add('valid');
+      errEl.textContent = '';
+      return true;
+    }
+  }
+
+  function clearValidState(input, errEl){
+    input.classList.remove('invalid','valid');
+    errEl.textContent = '';
+  }
+
+  // ---------- Live card preview updates ----------
+  let currentBrand = 'unknown';
+
+  function updateBrandVisuals(brand){
+    currentBrand = brand;
+    cardFront.className = 'card-face card-front' + (brand !== 'unknown' ? ' brand-' + brand : '');
+    brandLogoFront.innerHTML = BRAND_MARKS[brand] || '';
+    brandLogoBack.innerHTML = BRAND_MARKS[brand] || '';
+    brandMiniLabel.textContent = brand !== 'unknown' ? brand.toUpperCase() : '';
+  }
+
+  cardNumberEl.addEventListener('input', function(){
+    const brand = detectBrand(this.value);
+    if (brand !== currentBrand) updateBrandVisuals(brand);
+
+    const formatted = formatCardNumber(this.value, brand);
+    this.value = formatted;
+
+    cardNumberDisplay.textContent = formatted
+      ? formatted.padEnd(brand === 'amex' ? 17 : (brand === 'diners' ? 16 : 19), '•').replace(/(.{4})(?=.)/g, '$1 ').trim().replace(/\s+/g,' ')
+      : '•••• •••• •••• ••••';
+
+    // simpler direct display fallback
+    cardNumberDisplay.textContent = formatted || '•••• •••• •••• ••••';
+
+    cvvEl.maxLength = cvvMaxLen(brand);
+  });
+
+  cardNumberEl.addEventListener('blur', function(){
+    const digits = this.value.replace(/\D/g,'');
+    const brand = detectBrand(this.value);
+    const minLen = brand === 'amex' ? 15 : (brand === 'diners' ? 14 : 16);
+    if (digits.length === 0){
+      setError(this, document.getElementById('err-cardNumber'), 'שדה חובה');
+    } else if (digits.length < minLen || !luhnValid(digits)){
+      setError(this, document.getElementById('err-cardNumber'), 'מספר כרטיס אינו תקין');
+    } else {
+      setError(this, document.getElementById('err-cardNumber'), '');
+    }
+  });
+
+  holderNameEl.addEventListener('input', function(){
+    const val = this.value.trim();
+    cardNameDisplay.textContent = val ? val.toUpperCase() : 'YOUR NAME';
+  });
+  holderNameEl.addEventListener('blur', function(){
+    if (!this.value.trim()){
+      setError(this, document.getElementById('err-holderName'), 'נא להזין שם בעל הכרטיס');
+    } else if (this.value.trim().length < 2){
+      setError(this, document.getElementById('err-holderName'), 'שם קצר מדי');
+    } else {
+      setError(this, document.getElementById('err-holderName'), '');
+    }
+  });
+
+  nationalIdEl.addEventListener('input', function(){
+    this.value = this.value.replace(/\D/g,'').slice(0,9);
+  });
+  nationalIdEl.addEventListener('blur', function(){
+    if (!this.value){
+      setError(this, document.getElementById('err-nationalId'), 'שדה חובה');
+    } else if (!isValidIsraeliId(this.value)){
+      setError(this, document.getElementById('err-nationalId'), 'מספר תעודת זהות אינו תקין');
+    } else {
+      setError(this, document.getElementById('err-nationalId'), '');
+    }
+  });
+
+  expiryEl.addEventListener('input', function(){
+    let digits = this.value.replace(/\D/g,'').slice(0,4);
+    let formatted = digits;
+    if (digits.length >= 3){
+      formatted = digits.slice(0,2) + '/' + digits.slice(2);
+    } else if (digits.length === 2){
+      // allow user to keep typing; add slash once 3rd digit typed
+      formatted = digits;
+    }
+    this.value = formatted;
+    cardExpiryDisplay.textContent = formatted || 'MM/YY';
+  });
+
+  function isExpiryValid(value){
+    const m = value.match(/^(\d{2})\/(\d{2})$/);
+    if (!m) return false;
+    const month = parseInt(m[1], 10);
+    const year = parseInt('20' + m[2], 10);
+    if (month < 1 || month > 12) return false;
+    const now = new Date();
+    const curYear = now.getFullYear();
+    const curMonth = now.getMonth() + 1;
+    if (year < curYear) return false;
+    if (year === curYear && month < curMonth) return false;
+    if (year > curYear + 15) return false;
+    return true;
+  }
+
+  expiryEl.addEventListener('blur', function(){
+    if (!this.value){
+      setError(this, document.getElementById('err-expiry'), 'שדה חובה');
+    } else if (!isExpiryValid(this.value)){
+      setError(this, document.getElementById('err-expiry'), 'תוקף לא תקין');
+    } else {
+      setError(this, document.getElementById('err-expiry'), '');
+    }
+  });
+
+  cvvEl.addEventListener('input', function(){
+    this.value = this.value.replace(/\D/g,'').slice(0, cvvMaxLen(currentBrand));
+    cardCvvDisplay.textContent = this.value ? this.value.padEnd(this.value.length, '•') : '•••';
+    cardCvvDisplay.textContent = this.value || '•••';
+  });
+
+  cvvEl.addEventListener('focus', function(){
+    card3d.classList.add('flipped');
+  });
+  cvvEl.addEventListener('blur', function(){
+    card3d.classList.remove('flipped');
+    const minLen = cvvMaxLen(currentBrand);
+    if (!this.value){
+      setError(this, document.getElementById('err-cvv'), 'שדה חובה');
+    } else if (this.value.length < minLen){
+      setError(this, document.getElementById('err-cvv'), 'קוד אבטחה קצר מדי');
+    } else {
+      setError(this, document.getElementById('err-cvv'), '');
+    }
+  });
+
+  // ---------- Submit ----------
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+
+    const validName = setError(holderNameEl, document.getElementById('err-holderName'),
+      holderNameEl.value.trim().length < 2 ? 'נא להזין שם בעל הכרטיס תקין' : '');
+
+    const validId = setError(nationalIdEl, document.getElementById('err-nationalId'),
+      !isValidIsraeliId(nationalIdEl.value) ? 'מספר תעודת זהות אינו תקין' : '');
+
+    const cardDigits = cardNumberEl.value.replace(/\D/g,'');
+    const brand = detectBrand(cardNumberEl.value);
+    const minLen = brand === 'amex' ? 15 : (brand === 'diners' ? 14 : 16);
+    const validCard = setError(cardNumberEl, document.getElementById('err-cardNumber'),
+      (cardDigits.length < minLen || !luhnValid(cardDigits)) ? 'מספר כרטיס אינו תקין' : '');
+
+    const validExpiry = setError(expiryEl, document.getElementById('err-expiry'),
+      !isExpiryValid(expiryEl.value) ? 'תוקף לא תקין' : '');
+
+    const validCvv = setError(cvvEl, document.getElementById('err-cvv'),
+      cvvEl.value.length < cvvMaxLen(brand) ? 'קוד אבטחה אינו תקין' : '');
+
+    if (!(validName && validId && validCard && validExpiry && validCvv)){
+      form.classList.add('shake');
+      setTimeout(()=> form.classList.remove('shake'), 400);
+      const firstInvalid = form.querySelector('.invalid');
+      if (firstInvalid) firstInvalid.focus();
+      return;
+    }
+
+    // Simulate secure processing
+    payBtn.disabled = true;
+    const originalHTML = payBtn.innerHTML;
+    payBtn.innerHTML = '<span>מעבד תשלום...</span>';
+
+    setTimeout(function(){
+      payBtn.disabled = false;
+      payBtn.innerHTML = originalHTML;
+      confNumber.textContent = '#' + Math.floor(100000 + Math.random()*900000);
+      successBox.classList.add('show');
+      successBox.scrollIntoView({behavior:'smooth', block:'nearest'});
+    }, 1400);
+  });
+
+})();
+</script>
+</body>
+</html>
